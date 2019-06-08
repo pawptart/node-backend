@@ -12,18 +12,32 @@ let getNotes = (req: any, res: any) => {
 		
 		if (err) throw err;
 
-		var db = client.db('note');
+		const db = client.db('note');
 
-		var notes = db.collection('notes').find({});
+		let notePromise = () => {
+			return new Promise((resolve, reject) => {
+				db
+					.collection('notes')
+					.find({})
+					.toArray(function(err: any, data: any) {
+						if (err) throw err;
+						resolve(data);
+						});
+			});
+		}
 
-		let noteArray: Array<any> = [];
-		notes.each( (err: any, note: any) => {
-			noteArray.push(note);
+		let callNotePromise = async () => {
+			let result = await (notePromise());
+			return result;
+		}
+
+		callNotePromise().then((result) => {
+
+			client.close();
+			res.json(result);
+
 		});
 
-		// Todo: dirty hack, fix this
-		setTimeout( () => {res.send(noteArray)}, 5000); 
-		client.close();
 	});
 
 }
@@ -48,8 +62,8 @@ let createNote = (req: any, res: any) => {
 
 // API endpoints
 
-app.get( '/notes', getNotes );
-app.get( '/notes/create', createNote );
+app.get( '/api/notes', getNotes );
+app.get( '/api/notes/create', createNote );
 
 app.listen( port, () => {
 	console.log( `server started at http://localhost:${ port }` );
