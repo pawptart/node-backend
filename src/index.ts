@@ -16,10 +16,13 @@ let getNotes = (req: any, res: any) => {
 
 		var notes = db.collection('notes').find({});
 
+		let noteArray: Array<any> = [];
 		notes.each( (err: any, note: any) => {
-			console.log(note);
+			noteArray.push(note);
 		});
 
+		// Todo: dirty hack, fix this
+		setTimeout( () => {res.send(noteArray)}, 5000); 
 		client.close();
 	});
 
