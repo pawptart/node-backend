@@ -1,10 +1,10 @@
 import express = require('express');
-import path from 'path';
 import { MongoClient } from 'mongodb';
 
 // Express app config
 const app = express();
 const mongoUrl = 'mongodb+srv://test:test@cluster0-9igoz.mongodb.net/test?retryWrites=true&w=majority';
+const port = process.env.PORT || 3000;
 
 let getNotes = (req: any, res: any) => {
 
@@ -65,9 +65,7 @@ let createNote = (req: any, res: any) => {
 app.get( '/api/notes', getNotes );
 app.get( '/api/notes/create', createNote );
 
-app
-	.use(express.static(path.join(__dirname + '/dist/node-backend')))
-	.listen( process.env.PORT || 8080, () => {
-		console.log( "SERVER STARTED" );
+app.listen( port, function () {
+	console.log("Server started.")
 });
 
