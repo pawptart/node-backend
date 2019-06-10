@@ -1,10 +1,15 @@
 import express = require('express');
+import bodyParser = require('body-parser');
 import { MongoClient } from 'mongodb';
 
 // Express app config
 const app = express();
 const mongoUrl = 'mongodb+srv://test:test@cluster0-9igoz.mongodb.net/test?retryWrites=true&w=majority';
 const port = process.env.PORT || 3000;
+
+// body-parser config
+// app.use(bodyParser.urlencoded({ extended: false}));
+app.use(bodyParser.json());
 
 let getNotes = (req: any, res: any) => {
 
@@ -44,18 +49,18 @@ let getNotes = (req: any, res: any) => {
 
 let createNote = (req: any, res: any) => {
 
+		let data = req.body;
+
 	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
 
 		if (err) throw err;
 
-		var db = client.db('note');
+		const db = client.db('note');
 		
-		db.collection('notes').insertOne({
-			title: "Testing!",
-			content: "This is just a test, for real." 
-		});
+		db.collection('notes').insertOne(data);
 
 		client.close();
+		res.send({status: "Success"});
 	});	
 
 }
@@ -63,9 +68,9 @@ let createNote = (req: any, res: any) => {
 // API endpoints
 
 app.get( '/api/notes', getNotes );
-app.get( '/api/notes/create', createNote );
+app.post( '/api/notes/create', createNote );
 
 app.listen( port, function () {
-	console.log("Server started.")
+	console.log(`Server started, listening on port ${port}.`)
 });
 
