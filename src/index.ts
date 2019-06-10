@@ -65,7 +65,7 @@ let createNote = (req: any, res: any) => {
 app.get( '/api/notes', getNotes );
 app.get( '/api/notes/create', createNote );
 
-app.listen( port, () => {
-	console.log( `server started at http://localhost:${ port }` );
+app.listen( process.env.PORT || 8080, () => {
+	console.log( "SERVER STARTED" );
 });
 
