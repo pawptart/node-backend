@@ -73,23 +73,48 @@ let deleteNote = (req: any, res: any) => {
 
 		if (err) throw err;
 		const db = client.db('note');
-		
+
 		db
 			.collection('notes')
 			.deleteOne({_id: new ObjectID(id)}, (err: any) => {
 				if (err) throw err;
 		});
 
-		res.send("complete")
+		res.send({status: "Success"});
 	
 	});
 	
+}
+
+let updateNote = (req: any, res: any) => {
+
+	let id = req.params.id;
+	let data = req.body;
+
+	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
+
+		if (err) throw err;
+		const db = client.db('note');
+
+		db
+			.collection('notes')
+			.updateOne(
+				{_id: new ObjectID(id)}, 
+				{ $set: { title: data.title, content: data.content } }, 
+				(err: any) => {
+					if (err) throw err;
+		});
+
+		res.send({status: "Success"});
+	
+	}); 
 }
 
 // API endpoints for notes
 app.get( '/api/notes', getNotes );
 app.post( '/api/notes/create', createNote );
 app.delete( '/api/notes/delete/:id', deleteNote );
+app.patch('/api/notes/update/:id', updateNote );
 
 app.listen( port, function () {
 	console.log(`Server started, listening on port ${port}.`)
