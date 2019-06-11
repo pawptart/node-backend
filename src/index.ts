@@ -119,11 +119,49 @@ let updateNote = (req: any, res: any) => {
 	}); 
 }
 
+let getNote = (req: any, res: any) => {
+
+	let id = req.params.id;
+
+	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
+		
+		if (err) throw err;
+
+		const db = client.db('note');
+
+		let notePromise = () => {
+			return new Promise((resolve, reject) => {
+				db
+					.collection('notes')
+					.find({ _id: new ObjectID(id) })
+					.toArray(function(err: any, data: any) {
+						if (err) throw err;
+						resolve(data);
+						});
+			});
+		}
+
+		let callNotePromise = async () => {
+			let result = await (notePromise());
+			return result;
+		}
+
+		callNotePromise().then((result) => {
+
+			client.close();
+			res.json(result);
+
+		});
+
+	});
+}
+
 // API endpoints for notes
 app.get( '/api/notes', getNotes );
 app.post( '/api/notes/create', createNote );
 app.delete( '/api/notes/delete/:id', deleteNote );
 app.patch('/api/notes/update/:id', updateNote );
+app.get( '/api/notes/:id', getNote );
 
 app.listen( port, function () {
 	console.log(`Server started, listening on port ${port}.`)
