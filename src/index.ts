@@ -1,6 +1,7 @@
 import express = require('express');
 import bodyParser = require('body-parser');
 import { MongoClient, ObjectID } from 'mongodb';
+import { triggerAsyncId } from 'async_hooks';
 
 // Express app config
 const app = express();
@@ -22,10 +23,8 @@ app.use(function(req, res, next) {
 
 let getNotes = (req: any, res: any) => {
 
-	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
-		
+	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {		
 		if (err) throw err;
-
 		const db = client.db('note');
 
 		let notePromise = () => {
@@ -46,14 +45,10 @@ let getNotes = (req: any, res: any) => {
 		}
 
 		callNotePromise().then((result) => {
-
 			client.close();
 			res.json(result);
-
 		});
-
 	});
-
 }
 
 let createNote = (req: any, res: any) => {
@@ -61,17 +56,12 @@ let createNote = (req: any, res: any) => {
 	let data = req.body;
 
 	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
-
 		if (err) throw err;
-
-		const db = client.db('note');
-		
+		const db = client.db('note');		
 		db.collection('notes').insertOne(data);
-
 		client.close();
 		res.send({status: "Success"});
 	});	
-
 }
 
 let deleteNote = (req: any, res: any) => {
@@ -79,20 +69,16 @@ let deleteNote = (req: any, res: any) => {
 	let id = req.params.id;
 
 	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
-
 		if (err) throw err;
 		const db = client.db('note');
-
 		db
 			.collection('notes')
 			.deleteOne({_id: new ObjectID(id)}, (err: any) => {
 				if (err) throw err;
 		});
 
-		res.send({status: "Success"});
-	
-	});
-	
+		res.send({status: "Success"});	
+	});	
 }
 
 let updateNote = (req: any, res: any) => {
@@ -114,8 +100,7 @@ let updateNote = (req: any, res: any) => {
 					if (err) throw err;
 		});
 
-		res.send({status: "Success"});
-	
+		res.send({status: "Success"});	
 	}); 
 }
 
@@ -123,10 +108,8 @@ let getNote = (req: any, res: any) => {
 
 	let id = req.params.id;
 
-	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
-		
+	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {		
 		if (err) throw err;
-
 		const db = client.db('note');
 
 		let notePromise = () => {
@@ -147,12 +130,32 @@ let getNote = (req: any, res: any) => {
 		}
 
 		callNotePromise().then((result) => {
-
 			client.close();
 			res.json(result);
-
 		});
+	});
+}
 
+let createTag = (req: any, res: any) => {
+
+	let data = req.body
+	console.log(data);
+	let noteId = req.params.id
+
+	MongoClient.connect( mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
+		if (err) throw err;
+		const db = client.db('note');
+		db
+			.collection('notes')
+			.updateOne( 
+				{_id: new ObjectID(noteId) },
+				{ $push: { tags: data } },
+				(err: any) => {
+					if (err) throw err;
+				}
+			)
+
+		res.send({status: "Success"});
 	});
 }
 
@@ -162,6 +165,7 @@ app.post( '/api/notes/create', createNote );
 app.delete( '/api/notes/delete/:id', deleteNote );
 app.patch('/api/notes/update/:id', updateNote );
 app.get( '/api/notes/:id', getNote );
+app.post( '/api/notes/:id/tags/create', createTag);
 
 app.listen( port, function () {
 	console.log(`Server started, listening on port ${port}.`)
