@@ -1,6 +1,6 @@
 import express = require('express');
 import bodyParser = require('body-parser');
-import { ObjectID } from 'mongodb';
+import { ObjectID, MongoClient } from 'mongodb';
 import { mongoConnect } from './mongo-connect';
 
 (async () => {
@@ -189,6 +189,7 @@ import { mongoConnect } from './mongo-connect';
 
 		let data = req.body;
 		let noteId = req.params.id;
+		let tagId = new Date().getTime().toString();
 		const { mongoDb, mongoClient } = await mongoConnect(mongoUrl, "note");
 
 		try {
@@ -196,7 +197,7 @@ import { mongoConnect } from './mongo-connect';
 			.collection('notes')
 			.updateOne(
 				{ _id: new ObjectID(noteId) },
-				{ $push: { tags: data } },
+				{ $push: { tags: { name: data.name, id: tagId } } },
 				(err: any) => {
 					if (err) throw err;
 				}
@@ -206,10 +207,49 @@ import { mongoConnect } from './mongo-connect';
 			res.status(500).send({status: "error", error: err});
 			return;
 		}
+
+		try {
+			mongoClient.close();
+		}
+		catch (err) {
+			res.status(500).send({status: "error", error: err});
+			return;
+		}
 		
 		res.status(200).send({ status: "Success" });
 	}
 	
+	let deleteTag = async (req: any, res: any) => {
+		let noteId = req.params.id;
+		let tagId = req.params.tagId;
+		const { mongoDb, mongoClient } = await mongoConnect(mongoUrl, "note");
+
+		try {
+			mongoDb
+				.collection('notes')
+				.updateOne(
+					{ _id: new ObjectID(noteId) },
+					{ $pull: { tags: { id: tagId } } },
+					(err: any) => {
+						if (err) throw err;
+					}
+				)
+		}
+		catch (err) {
+			res.status(500).send({status: "error", error: err});
+			return;
+		}
+
+		try {
+			mongoClient.close();
+		}
+		catch (err) {
+			res.status(500).send({status: "error", error: err});
+			return;
+		}
+		
+		res.status(200).send({ status: "Success" });
+	}
 
 	// API endpoints for notes
 	app.get('/api/notes', getNotes);
@@ -220,6 +260,7 @@ import { mongoConnect } from './mongo-connect';
 
 	// API endpoints for tags
 	app.post('/api/notes/:id/tags/create', createTag);
+	app.delete('/api/notes/:id/tags/delete/:tagId', deleteTag);
 
 	app.listen(port, function () {
 		console.log(`Server started, listening on port ${port}.`)
