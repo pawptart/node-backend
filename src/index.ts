@@ -1,6 +1,6 @@
 import express = require('express');
 import bodyParser = require('body-parser');
-import { MongoClient, ObjectID } from 'mongodb';
+import { ObjectID } from 'mongodb';
 import { mongoConnect } from './mongo-connect';
 
 (async () => {
@@ -37,12 +37,25 @@ import { mongoConnect } from './mongo-connect';
 		}
 
 		let callNotePromise = async () => {
-			let result = await notePromise();
-			return result;
+			try {
+				let result = await notePromise();
+				return result;
+			}
+			catch (err) {
+				res.status(500).send({status: "error", error: err});
+				return;
+			}
 		}
 
 		const result = await callNotePromise();
-		await mongoClient.close();
+		try {
+			await mongoClient.close();
+		}
+		catch (err) {
+			res.status(500).send({ status: 'error', error: err });
+			return;
+		}
+
 		res.json(result);
 	}
 
@@ -51,7 +64,7 @@ import { mongoConnect } from './mongo-connect';
 		const { mongoDb, mongoClient } = await mongoConnect(mongoUrl, 'note');
 		let data = req.body;
 		try {
-			await mongoDb.collection('notes').insertOne('data');
+			await mongoDb.collection('notes').insertOne(data);
 		}
 		catch (err) {
 			res.status(500).send({ status: 'error', error: err });
@@ -69,34 +82,44 @@ import { mongoConnect } from './mongo-connect';
 
 	}
 
-	let deleteNote = (req: any, res: any) => {
+	let deleteNote = async (req: any, res: any) => {
 
 		let id = req.params.id;
-
-		MongoClient.connect(mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
-			if (err) throw err;
-			const db = client.db('note');
-			db
+		const { mongoDb, mongoClient } = await mongoConnect(mongoUrl, 'note');
+	
+		try {
+			mongoDb
 				.collection('notes')
 				.deleteOne({ _id: new ObjectID(id) }, (err: any) => {
 					if (err) throw err;
 				});
+		}
+		catch (err) {
+			res.status(500).send({ status: 'error', error: err });
+			return;
+		}
 
-			res.send({ status: "Success" });
-		});
+		try {
+			mongoClient.close();
+		}
+		catch (err) {
+			res.status(500).send({ status: 'error', error: err });
+			return;
+		}
+		
+		res.status(200).send({ status: "Success" });
+	
 	}
 
-	let updateNote = (req: any, res: any) => {
+	let updateNote = async (req: any, res: any) => {
 
 		let id = req.params.id;
 		let data = req.body;
 
-		MongoClient.connect(mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
+		const { mongoDb, mongoClient } = await mongoConnect(mongoUrl, 'note');
 
-			if (err) throw err;
-			const db = client.db('note');
-
-			db
+		try {
+			mongoDb
 				.collection('notes')
 				.updateOne(
 					{ _id: new ObjectID(id) },
@@ -104,22 +127,32 @@ import { mongoConnect } from './mongo-connect';
 					(err: any) => {
 						if (err) throw err;
 					});
+		}
+		catch (err) {
+			res.status(500).send({status: "error", error: err});
+			return;
+		}
 
-			res.send({ status: "Success" });
-		});
+		try {
+			mongoClient.close();
+		}
+		catch (err) {
+			res.status(500).send({status: "error", error: err});
+			return;
+		}
+
+		res.status(200).send({ status: "Success" });
+
 	}
 
-	let getNote = (req: any, res: any) => {
+	let getNote = async (req: any, res: any) => {
 
 		let id = req.params.id;
-
-		MongoClient.connect(mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
-			if (err) throw err;
-			const db = client.db('note');
-
+		const { mongoDb, mongoClient } = await mongoConnect(mongoUrl, "note");
+		
 			let notePromise = () => {
 				return new Promise((resolve, reject) => {
-					db
+					mongoDb
 						.collection('notes')
 						.find({ _id: new ObjectID(id) })
 						.toArray((err: any, data: any) => {
@@ -130,38 +163,53 @@ import { mongoConnect } from './mongo-connect';
 			}
 
 			let callNotePromise = async () => {
-				let result = await (notePromise());
-				return result;
+				try {
+					let result = await (notePromise());
+					return result;
+				}
+				catch (err) {
+					res.status(500).send({status: "error", error: err});
+					return;
+				}
 			}
 
 			callNotePromise().then((result) => {
-				client.close();
+				try {
+					mongoClient.close();
+				}
+				catch (err) {
+					res.status(500).send({status: "error", error: err});
+					return;
+				}
 				res.json(result);
 			});
-		});
 	}
 
-	let createTag = (req: any, res: any) => {
+	let createTag = async (req: any, res: any) => {
 
 		let data = req.body;
 		let noteId = req.params.id;
+		const { mongoDb, mongoClient } = await mongoConnect(mongoUrl, "note");
 
-		MongoClient.connect(mongoUrl, { useNewUrlParser: true }, (err: any, client: any) => {
-			if (err) throw err;
-			const db = client.db('note');
-			db
-				.collection('notes')
-				.updateOne(
-					{ _id: new ObjectID(noteId) },
-					{ $push: { tags: data } },
-					(err: any) => {
-						if (err) throw err;
-					}
-				)
-
-			res.send({ status: "Success" });
-		});
+		try {
+			mongoDb
+			.collection('notes')
+			.updateOne(
+				{ _id: new ObjectID(noteId) },
+				{ $push: { tags: data } },
+				(err: any) => {
+					if (err) throw err;
+				}
+			)
+		}
+		catch (err) {
+			res.status(500).send({status: "error", error: err});
+			return;
+		}
+		
+		res.status(200).send({ status: "Success" });
 	}
+	
 
 	// API endpoints for notes
 	app.get('/api/notes', getNotes);
@@ -169,6 +217,8 @@ import { mongoConnect } from './mongo-connect';
 	app.delete('/api/notes/delete/:id', deleteNote);
 	app.patch('/api/notes/update/:id', updateNote);
 	app.get('/api/notes/:id', getNote);
+
+	// API endpoints for tags
 	app.post('/api/notes/:id/tags/create', createTag);
 
 	app.listen(port, function () {
@@ -176,4 +226,3 @@ import { mongoConnect } from './mongo-connect';
 	});
 
 })();
-
